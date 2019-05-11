@@ -1,25 +1,17 @@
-import 'package:demo_flutter/user_entity.dart';
+import 'package:demo_flutter/custom_circle_avatar.dart';
+import 'package:demo_flutter/model/user_entity.dart';
+import 'package:demo_flutter/user_bloc.dart';
 import 'package:flutter/material.dart';
 import 'package:sticky_headers/sticky_headers.dart';
 
 void main() => runApp(MyApp());
 
 class MyApp extends StatelessWidget {
-  // This widget is the root of your application.
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
       title: 'Flutter Demo',
       theme: ThemeData(
-        // This is the theme of your application.
-        //
-        // Try running your application with "flutter run". You'll see the
-        // application has a blue toolbar. Then, without quitting the app, try
-        // changing the primarySwatch below to Colors.green and then invoke
-        // "hot reload" (press "r" in the console where you ran "flutter run",
-        // or simply save your changes to "hot reload" in a Flutter IDE).
-        // Notice that the counter didn't reset back to zero; the application
-        // is not restarted.
         primarySwatch: Colors.blue,
       ),
       home: MyHomePage(),
@@ -33,50 +25,66 @@ class MyHomePage extends StatefulWidget {
 }
 
 class _MyHomePageState extends State<MyHomePage> {
+  final _bloc = UserBloc();
+  ScrollController _controller;
 
-  List<UserEntity> users;
+  List<UserEntity> users = [];
+
   @override
   void initState() {
-    users = [UserEntity(id: '1', name: "A", )];
+    _controller = ScrollController();
     super.initState();
   }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: Text("Flutter Demo"),
+        title: Text("Flutter Demo Contacts"),
       ),
-      body: SingleChildScrollView(
-        child: Column(
-          children: _buildContacts(),
-        ),
-      ),
+      body: StreamBuilder<List<UserEntity>>(
+          stream: _bloc.userList,
+          builder: (context, snapshot) {
+            if (snapshot.hasData && snapshot.data.isNotEmpty) {
+              return ListView(
+                controller: _controller,
+                itemExtent: 80,
+                semanticChildCount: snapshot.data.length,
+                children: _buildContacts(snapshot.data),
+              );
+            } else {
+              return Center(
+                child: Text("No Contacts Available"),
+              );
+            }
+          }),
     );
   }
 
-  List<Widget> _buildContacts() {
+  List<Widget> _buildContacts(List<UserEntity> data) {
     List<Widget> list = [];
-    for (var i = 0; i < 25; i++) {
-      list.add(StickyHeader(
-          header: Container(
-              color: Colors.white,
-              width: MediaQuery.of(context).size.width,
-              padding: EdgeInsets.fromLTRB(20, 10, 5, 5),
-              child: Text("A")),
-          content: Column(children: _buildSomeItems("A"))));
-    }
+    List<Widget> charList = [];
+
+    String previousLetter = "";
+    data.map((f) {
+      final initial = f.fullName.substring(0, 1).toUpperCase();
+      if (previousLetter.isEmpty || initial == previousLetter) {
+        charList.add(ListTile(
+          leading: CustomCircleAvatar(name: f.fullName, imageUrl: f.profilePic),
+          title: Text(f.fullName),
+        ));
+      } else {
+        previousLetter = initial;
+        list.add(StickyHeader(
+            header: Container(
+                color: Colors.white,
+                width: MediaQuery.of(context).size.width,
+                padding: EdgeInsets.fromLTRB(20, 10, 5, 5),
+                child: Text(initial)),
+            content: Column(children: charList)));
+      }
+    }).toList();
+
     return list;
-  }
-
-  List<Widget> _buildSomeItems(String item) {
-    List<Widget> l = [];
-
-    for (var i = 0; i < 5; i++) {
-      l.add(ListTile(
-        leading: CircleAvatar(child: Text("A")),
-
-      ));
-    }
-    return l;
   }
 }
